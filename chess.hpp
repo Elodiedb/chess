@@ -147,6 +147,8 @@ public:
     square dep;
     square arr;
     bool is_capture;
+    bool is_special;
+    type_piece* promotion;
     coup(const piece p, const square dep, const square arr, const bool is_capture);
     coup();
 };
@@ -179,7 +181,7 @@ float eval(const Echiquier &e);
 //===========================================================================
 piece char2p(const char c); // lettre to pièce (renvoie la pièce noire)
 int col2int(const char c);  // c est une lettre entre a et h représentant une colonne. Renvoie le j correspondant
-coup alg2coup(char alg[], bool is_white);
+coup alg2coup(char alg[], bool is_white, const Echiquier& e);
 coup lit_alg(const char *c_alg, bool is_white);
 
 #endif
