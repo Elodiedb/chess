@@ -43,18 +43,27 @@ int main()
         }
         else
         {
-            // tour des noirs aka lae joueur.euse
-            // cout << "e avant c_in\n" << pos.e;
-            char alg[10];
-            // cout << "e juste avant c_in\n" << pos.e;
-            cin >> alg;
-            // cout << "e_juste après le c_in\n" << pos.e;
-            coup c = alg2coup(alg, pos.white_turn);
-            // cout << "lecture terminee\n";
-            // cout << "e avant coup\n" << pos.e;
+            coup c = coup();
+            while(!is_legal(c,pos.e))
+            //tour des noirs aka lae joueur.euse
+            //cout << "e avant c_in\n" << pos.e;
+            {
+                cout << "Entrez un coup : ";
+                char alg[10];
+                for (int i = 0; i < 10; i++)
+                {
+                    alg[i] = ' ';
+                }
+                //cout << "e juste avant c_in\n" << pos.e;
+                cin >> alg;
+                //cout << "e_juste après le c_in\n" << pos.e;
+                c = alg2coup(alg, pos.white_turn, pos.e);
+                //cout << "lecture terminee\n";
+                //cout << "e avant coup\n" << pos.e;
+            }
             pos.e.make_move(c);
             pos.white_turn = !pos.white_turn;
             cout << pos.e;
-        }
+            }
     }
 };
