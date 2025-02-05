@@ -18,7 +18,7 @@ public:
     float eval_pos() const;
     Position(const Echiquier &e, const bool &white_turn, Position *fille, Position *soeur, const coup &c); // fille et soeur seront modifiables!!!
     void prof_suivante(int prof);
-    ~Position(); // efface la position ainsi que les filles
+    ~Position(); // efface récursivement la position ainsi que les filles et les soeurs
 };
 
 //===========================================================================
