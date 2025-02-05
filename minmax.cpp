@@ -49,89 +49,115 @@ Position ::~Position()
     //  cout << "nb_pos : "<< nb_pos << "\n";
 }
 
-void Position ::prof_suivante(int prof)
+void Position :: prof_suivante(int prof)
 {
-    // cout << "Appel a prof " << prof << "\n";
-    // int capture_trouvees = 0;
-    Echiquier e = this->e;
-    // cout << e << "\n";
+    //cout << "Appel a prof " << prof << "\n";
+    //int capture_trouvees = 0;
+    Echiquier e  = this->e;
+    //cout << e << "\n";
     bool should_look = true;
-    Position *fille_prec = nullptr;
+    Position * fille_prec = nullptr;
     bool must_capture = false;
     if (prof <= 0)
     {
         must_capture = true;
     }
-    if (prof < -4) // résout le problème sans trop que je sache pourquoi
+    if (prof < -4)     //résout le problème sans trop que je sache pourquoi
     {
         should_look = false;
     }
     if (should_look)
     {
-        for (int i = 0; i < 8; i++)
+        for(int i = 0; i< 8; i++)
         {
-            for (int j = 0; j < 8; j++)
+            for(int j = 0; j < 8; j++)
             {
-                // cout << "i :" << i << "; j : " << j << "\n";
-                piece *ptr_piece = e.board[i][j];
+                //cout << "i :" << i << "; j : " << j << "\n";
+                piece* ptr_piece = e.board[i][j];
                 if (ptr_piece != nullptr)
                 {
                     piece p = *ptr_piece;
                     // cout << this->white_turn;
-                    if (p.type != P && (p.isWhite == this->white_turn)) // ce n'est pas un pion
+                    if (p.type != P && (p.isWhite == this->white_turn))    //ce n'est pas un pion
                     {
+                        if (p.type == K)
+                        {
+                            int i_dep = 0;
+                            if (!this->white_turn)
+                            {
+                                i_dep = 7;
+                            }
+                            coup grand_roque = coup(piece(char2p('K'), this->white_turn), square(i_dep, 4), square(i_dep, 2),false, true, nullptr);
+                            if (is_legal(grand_roque, e))
+                            {
+                                Echiquier nouv_e = e;
+                                nouv_e.make_move(grand_roque);
+                                Position* fille = new Position(nouv_e, !white_turn,nullptr, fille_prec, grand_roque);
+                                fille_prec = fille;
+                                this->fille = fille;
+                            }
+                            coup petit_roque = coup(piece(char2p('K'), this->white_turn), square(i_dep, 4), square(i_dep, 6),false, true, nullptr);
+                            if (is_legal(petit_roque, e))
+                            {
+                                Echiquier nouv_e = e;
+                                nouv_e.make_move(petit_roque);
+                                Position* fille = new Position(nouv_e, !white_turn,nullptr, fille_prec, petit_roque);
+                                fille_prec = fille;
+                                this->fille = fille;
+                            }
+                        }
                         int n = p.nb_dir;
-                        for (int l = 0; l < n; l++)
+                        for(int l = 0; l < n; l++)
                         {
                             bool peut_continuer = true;
-                            square s = square(i, j);
-                            for (s += p.moves[l]; is_in(s) && peut_continuer; s += p.moves[l])
+                            square s = square(i,j);
+                            for(s += p.moves[l];is_in(s) && peut_continuer; s+=p.moves[l])
                             {
-                                piece *ptr_p_s = e.board[s.i][s.j]; // eventuelle piece sur la case arr
-                                peut_continuer = p.iter;            // si on ne peut pas aller plusieurs fois dans la même direction, on ne peut jamais continuer
+                                piece* ptr_p_s = e.board[s.i][s.j];     //eventuelle piece sur la case arr
+                                peut_continuer = p.iter;     // si on ne peut pas aller plusieurs fois dans la même direction, on ne peut jamais continuer
                                 if (e.board[s.i][s.j] != nullptr)
                                 {
-                                    // on arrive sur une pièce
-                                    piece p_s = *(e.board[s.i][s.j]); // IL SEMBLERAIT QUE CA SOIT DIFFERRENT DE "piece p_s = *(ptr_p_s)" !!!!
-                                    // cout << "Echiquier depart : \n" << e;
-                                    // cout << "i : " << i << " j: " << j << "\n";
-                                    // cout << "piece bougee : " << p << "\n";
-                                    // cout << "on arrive sur une piece :   " << p_s << *(e.board[s.i][s.j]) << "\n";
-                                    // cout << "case d arrivee : (" << s.i << "," << s.j<<")\n";
-                                    // cout << (p_s.isWhite ? "true" : "false" )<<  (this->white_turn ? "true" : "false") << "\n";
+                                    //on arrive sur une pièce
+                                    piece p_s = *(e.board[s.i][s.j]);               //IL SEMBLERAIT QUE CA SOIT DIFFERRENT DE "piece p_s = *(ptr_p_s)" !!!!
+                                    //cout << "Echiquier depart : \n" << e;
+                                    //cout << "i : " << i << " j: " << j << "\n";
+                                    //cout << "piece bougee : " << p << "\n";
+                                    //cout << "on arrive sur une piece :   " << p_s << *(e.board[s.i][s.j]) << "\n";
+                                    //cout << "case d arrivee : (" << s.i << "," << s.j<<")\n";
+                                    //cout << (p_s.isWhite ? "true" : "false" )<<  (this->white_turn ? "true" : "false") << "\n";
                                     peut_continuer = false;
                                     if (p_s.isWhite != this->white_turn)
                                     {
-                                        // on a trouvé une capture
-                                        // cout << "on a trouve une capture !! \n";
+                                        //on a trouvé une capture
+                                        //cout << "on a trouve une capture !! \n";
                                         Echiquier nouv_e = e;
-                                        // cout << "nouv_e avant capture\n" << nouv_e << "\n";
-                                        coup c = coup(p, square(i, j), s, true);
+                                        //cout << "nouv_e avant capture\n" << nouv_e << "\n";
+                                        coup c = coup(p, square(i,j),s, true);
                                         nouv_e.make_move(c);
-                                        // cout << "nouv_e apres capture\n" << nouv_e << "\n";
-                                        // capture_trouvees++;
-                                        // cout << "capture_trouvees :"   << capture_trouvees << "\n";
-                                        Position *fille = new Position(nouv_e, !white_turn, nullptr, fille_prec, c);
-                                        // fille->prof_suivante(prof - 1);
+                                        //cout << "nouv_e apres capture\n" << nouv_e << "\n";
+                                        //capture_trouvees++;
+                                        //cout << "capture_trouvees :"   << capture_trouvees << "\n";
+                                        Position* fille =new Position(nouv_e, !white_turn, nullptr, fille_prec, c);
+                                        //fille->prof_suivante(prof - 1);
                                         fille_prec = fille;
                                         this->fille = fille;
                                     }
                                 }
                                 else
                                 {
-                                    // on a trouvé un coup qui atterrit sur une case vide
+                                    //on a trouvé un coup qui atterrit sur une case vide
                                     if (!must_capture)
                                     {
-                                        // cout << "!must capture piece\n";
+                                        //cout << "!must capture piece\n";
                                         Echiquier nouv_e = e;
-                                        // cout << "nouv_e avant coup \n" << nouv_e << "\n";
-                                        nouv_e.make_move(coup(p, square(i, j), s, false));
-                                        // cout << "nouv_e apres coup \n" << nouv_e << "\n";
-                                        // cout << this->white_turn << "\n";
-                                        // cout << nouv_e;
-                                        // cout << "\n";
-                                        Position *fille = new Position(nouv_e, !white_turn, nullptr, fille_prec, coup(p, square(i, j), s, false));
-                                        // fille->prof_suivante(prof-1);
+                                        //cout << "nouv_e avant coup \n" << nouv_e << "\n";
+                                        nouv_e.make_move(coup(p, square(i,j),s, false));
+                                        //cout << "nouv_e apres coup \n" << nouv_e << "\n";
+                                        //cout << this->white_turn << "\n";
+                                        //cout << nouv_e;
+                                        //cout << "\n";
+                                        Position* fille = new Position(nouv_e, !white_turn,nullptr, fille_prec, coup(p, square(i,j),s, false));
+                                        //fille->prof_suivante(prof-1);
                                         fille_prec = fille;
                                         this->fille = fille;
                                     }
@@ -140,13 +166,13 @@ void Position ::prof_suivante(int prof)
                         }
                     }
 
-                    else if ((p.type == P) && (p.isWhite == this->white_turn))
+                    else if ((p.type == P) && (p.isWhite == this->white_turn) )
                     {
-                        // on bouge un pion
-                        // cout << "on bouge un pion \n";
-                        square dep = square(i, j);
+                        //on bouge un pion
+                        //cout << "on bouge un pion \n";
+                        square dep = square(i,j);
                         int di = 1;
-                        int i_dep = 1;
+                        int i_dep =1;
                         if (!white_turn)
                         {
                             di = -1;
@@ -154,94 +180,123 @@ void Position ::prof_suivante(int prof)
                         }
                         if (!must_capture)
                         {
-                            // cout << "white_turn\n";
-                            if (is_in(square(i + di, j)))
+                            //cout << "white_turn\n";
+                            if (is_in(square(i+di,j)))
                             {
-                                // cout << "case devant est dans l'echiquier \n";
-                                if (e.board[i + di][j] == nullptr)
+                                //cout << "case devant est dans l'echiquier \n";
+                                if(e.board[i + di][j] == nullptr)
                                 {
-                                    // la case devant le pion est libre
-                                    // cout << "pion blanc avance d'une case \n";
+                                    //la case devant le pion est libre
+                                    //cout << "pion blanc avance d'une case \n";
                                     Echiquier nouv_e = e;
-                                    // cout << "nouv_e avant coup \n" << nouv_e << "\n";
-                                    nouv_e.make_move(coup(p, dep, square(i + di, j), false));
-                                    // cout << "nouv_e apres coup \n" << nouv_e << "\n";
-                                    Position *fille = new Position(nouv_e, !white_turn, nullptr, fille_prec, coup(p, dep, square(i + di, j), false));
-                                    // fille->prof_suivante(prof-1);
+                                    //cout << "nouv_e avant coup \n" << nouv_e << "\n";
+                                    nouv_e.make_move(coup(p, dep, square(i+di, j), false));
+                                    //cout << "nouv_e apres coup \n" << nouv_e << "\n";
+                                    Position * fille = new Position(nouv_e, !white_turn, nullptr, fille_prec, coup(p, dep, square(i+di, j), false));
+                                    //fille->prof_suivante(prof-1);
                                     fille_prec = fille;
                                     this->fille = fille;
-                                    // cout << "on avance le pion " << j << "\n";
-                                    // cout << this->white_turn << "\n";
-                                    // cout << nouv_e;
-                                    // cout << "\n";
-                                    if (is_in(square(i + 2 * di, j)))
+                                    //cout << "on avance le pion " << j << "\n";
+                                    //cout << this->white_turn << "\n";
+                                    //cout << nouv_e;
+                                    //cout << "\n";
+                                    if (is_in(square(i+2 * di , j)))
                                     {
-                                        if ((e.board[i + 2 * di][j] == nullptr) && (i == i_dep))
+                                        if((e.board[i+2 * di ][j] == nullptr) && (i == i_dep))
                                         {
-                                            // cout << "pion blanc avance de deux cases \n";
-                                            // le pion peut avancer de deux cases
+                                            //cout << "pion blanc avance de deux cases \n";
+                                            //le pion peut avancer de deux cases
                                             Echiquier nouv_nouv_e = e;
-                                            // cout << "nouv_nouv_e avant coup \n" << nouv_nouv_e << "\n";
-                                            nouv_nouv_e.make_move(coup(p, dep, square(i + 2 * di, j), false));
-                                            // cout << "nouv_nouv_e apres coup \n" << nouv_nouv_e << "\n";
-                                            // cout << "avant l'appel de new position\n";
-                                            Position *fille2 = new Position(nouv_nouv_e, !white_turn, nullptr, fille_prec, coup(p, dep, square(i + 2 * di, j), false));
-                                            // cout << "avant l'appel de prof_suivante \n";
-                                            // fille2->prof_suivante(prof-1);
-                                            // cout << "la fille a été gérée \n";
+                                            //cout << "nouv_nouv_e avant coup \n" << nouv_nouv_e << "\n";
+                                            nouv_nouv_e.make_move(coup(p, dep, square(i+2 * di, j), false));
+                                            //cout << "nouv_nouv_e apres coup \n" << nouv_nouv_e << "\n";
+                                            //cout << "avant l'appel de new position\n";
+                                            Position * fille2 = new Position(nouv_nouv_e, !white_turn,nullptr, fille_prec, coup(p, dep, square(i+2 * di, j), false));
+                                            //cout << "avant l'appel de prof_suivante \n";
+                                            //fille2->prof_suivante(prof-1);
+                                            //cout << "la fille a été gérée \n";
                                             fille_prec = fille2;
                                             this->fille = fille2;
                                         }
                                     }
-                                    // cout << "on a géré les avancées de un et deux\n";
+                                    //cout << "on a géré les avancées de un et deux\n";
                                 }
                             }
                         }
-                        if (is_in(square(i + di, j + 1)))
+                        if (is_in(square(i+di, j+1)))
                         {
-                            // cout << "is_in diagonale droite\n";
-                            if (e.board[i + di][j + 1] != nullptr)
+                            if (e.en_passant != nullptr)
                             {
-                                // la case en diagonale du pion est occupée
-                                piece p2 = *(e.board[i + di][j + 1]);
-                                if (p2.isWhite != white_turn)
+                                if (*e.en_passant == square(i+di, j+1))
                                 {
-                                    // une capture est possible
+                                     //cout << "prise en diagonale \n";
                                     Echiquier nouv_e = e;
-                                    nouv_e.make_move(coup(p, dep, square(i + di, j + 1), true));
-                                    // capture_trouvees++;
-                                    // cout << "capture_trouvees :"   << capture_trouvees << "\n";
-                                    Position *fille = new Position(nouv_e, !white_turn, nullptr, fille_prec, coup(p, dep, square(i + di, j + 1), true));
-                                    // fille->prof_suivante(prof-1);
+                                    nouv_e.make_move(coup(p, dep, square(i+di, j+1), true));
+                                    //capture_trouvees++;
+                                    //cout << "capture_trouvees :"   << capture_trouvees << "\n";
+                                    Position * fille = new Position(nouv_e, !white_turn,nullptr, fille_prec, coup(p, dep, square(i+di, j+1), true, true));
+                                    //fille->prof_suivante(prof-1);
+                                    fille_prec = fille;
+                                    this->fille = fille;
+                                }
+                            }
+                            //cout << "is_in diagonale droite\n";
+                            if(e.board[i+di][j+1] != nullptr)
+                            {
+                                //la case en diagonale du pion est occupée
+                                piece p2 = *(e.board[i+di][j+1]);
+                                if(p2.isWhite != white_turn)
+                                {
+                                    //une capture est possible
+                                    Echiquier nouv_e = e;
+                                    nouv_e.make_move(coup(p, dep, square(i+di, j+1), true));
+                                    //capture_trouvees++;
+                                    //cout << "capture_trouvees :"   << capture_trouvees << "\n";
+                                    Position * fille = new Position(nouv_e, !white_turn,nullptr, fille_prec, coup(p, dep, square(i+di, j+1), true));
+                                    //fille->prof_suivante(prof-1);
                                     fille_prec = fille;
                                     this->fille = fille;
                                 }
                             }
                         }
-                        if (is_in(square(i + di, j - 1)))
+                        if (is_in(square(i+di, j-1)))
                         {
-                            // AJOUTER EN PASSANT ICI
-                            // cout << "is_in diagonale gauche \n";
-                            if (e.board[i + di][j - 1] != nullptr)
+                            if (e.en_passant != nullptr)
                             {
-                                // cout << "diagonale gauche occupee \n";
-                                // la case en diagonale du pion est occupée
-                                piece p2 = *(e.board[i + di][j - 1]);
-                                if (p2.isWhite != white_turn)
+                                if (*e.en_passant == square(i+di, j-1))
                                 {
-                                    // une capture est possible
-                                    // cout << "prise en diagonale \n";
+                                     //cout << "prise en diagonale \n";
                                     Echiquier nouv_e = e;
-                                    nouv_e.make_move(coup(p, dep, square(i + di, j - 1), true));
-                                    // capture_trouvees++;
-                                    // cout << "capture_trouvees :"   << capture_trouvees << "\n";
-                                    Position *fille = new Position(nouv_e, !white_turn, nullptr, fille_prec, coup(p, dep, square(i + di, j - 1), true));
-                                    // fille->prof_suivante(prof-1);
+                                    nouv_e.make_move(coup(p, dep, square(i+di, j-1), true));
+                                    //capture_trouvees++;
+                                    //cout << "capture_trouvees :"   << capture_trouvees << "\n";
+                                    Position * fille = new Position(nouv_e, !white_turn,nullptr, fille_prec, coup(p, dep, square(i+di, j-1), true, true));
+                                    //fille->prof_suivante(prof-1);
                                     fille_prec = fille;
                                     this->fille = fille;
                                 }
                             }
-                            // cout << "fin traitement diagonale gauche\n";
+                            //cout << "is_in diagonale gauche \n";
+                            if(e.board[i+di][j-1] != nullptr)
+                            {
+                                //cout << "diagonale gauche occupee \n";
+                                //la case en diagonale du pion est occupée
+                                piece p2 = *(e.board[i+di][j-1]);
+                                if(p2.isWhite != white_turn)
+                                {
+                                    //une capture est possible
+                                    //cout << "prise en diagonale \n";
+                                    Echiquier nouv_e = e;
+                                    nouv_e.make_move(coup(p, dep, square(i+di, j-1), true));
+                                    //capture_trouvees++;
+                                    //cout << "capture_trouvees :"   << capture_trouvees << "\n";
+                                    Position * fille = new Position(nouv_e, !white_turn,nullptr, fille_prec, coup(p, dep, square(i+di, j-1), true));
+                                    //fille->prof_suivante(prof-1);
+                                    fille_prec = fille;
+                                    this->fille = fille;
+                                }
+                            }
+                            //cout << "fin traitement diagonale gauche\n";
                         }
                         if (e.en_passant != nullptr)
                         {
@@ -250,15 +305,18 @@ void Position ::prof_suivante(int prof)
                                 //AJOUTER LES PRISES EN PASSANT!!!!!!!!!!!
                             }
                             */
+
                         }
+
                     }
                 }
             }
-            // cout << "en bas du for\n";
+                //cout << "en bas du for\n";
         }
-        // cout << capture_trouvees << "\n";
+        //cout << capture_trouvees << "\n";
     }
 };
+
 
 //===========================================================================
 //                          class Meilleur Coup
