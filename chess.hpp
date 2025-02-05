@@ -149,7 +149,7 @@ public:
     bool is_capture;
     bool is_special;
     type_piece* promotion;
-    coup(const piece p, const square dep, const square arr, const bool is_capture);
+    coup(const piece p, const square dep, const square arr, const bool is_capture, bool is_special, type_piece* promotion);
     coup();
 };
 
