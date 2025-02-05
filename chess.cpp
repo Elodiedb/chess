@@ -99,18 +99,22 @@ coup::coup()
     this->dep = square();
     this->arr = square();
     this->is_capture = false;
+    this->is_special = false;
+    this->promotion = nullptr;
 };
 
-coup ::coup(const piece p, const square dep, const square arr, const bool is_capture)
+coup ::coup(const piece p, const square dep, const square arr, const bool is_capture, bool is_special, type_piece* promotion))
 {
     this->p = p;
     this->dep = dep;
     this->arr = arr;
     this->is_capture = is_capture;
+    this->is_special = is_special;
+    this->promotion = promotion;
 };
 
 //===========================================================================
-//                          class Echequier
+//                          class Echiquier
 //===========================================================================
 Echiquier &Echiquier ::operator=(const Echiquier &e) // constructeur par copie
 {
@@ -203,37 +207,142 @@ void Echiquier ::make_move(const coup &c)
 {
     (this->board)[c.arr.i][c.arr.j] = (this->board)[c.dep.i][c.dep.j];
     (this->board)[c.dep.i][c.dep.j] = nullptr;
-    // cout << (*this);
+     if (c.is_special)
+    {
+        if(c.p.type == P)
+        {
+            //c'est une prise en passant
+            int di = 1;
+            if (!(c.p.isWhite))
+            {
+                di = -1;
+            }
+            this->board[c.dep.i][c.arr.j] = nullptr;
+        }
+        if (c.p.type == K)
+        {
+            //c'est un roque
+            if (c.arr.j == 6)
+            {
+                //c'est un petit roque
+                this->board[c.dep.i][5] = this->board[c.dep.i][7];
+                this->board[c.dep.i][7] = nullptr;
+            }
+             if (c.arr.j == 2)
+            {
+                //c'est un petit roque
+                this->board[c.dep.i][3] = this->board[c.dep.i][0];
+                this->board[c.dep.i][0] = nullptr;
+            }
+        }
+    }
+    this->en_passant = nullptr;
+    if (c.p.type == P)
+    {
+        if (abs(c.arr.i - c.dep.i) == 2)
+        //delete this->en_passant;
+        {this->en_passant = new square((c.arr.i + c.dep.i) / 2, c.dep.j);}
+        if (c.promotion != nullptr)
+            (*(this->board[c.arr.i][c.arr.j])).type = *c.promotion;
+    }
+    if (c.p.type == K)
+    {
+        if (c.p.isWhite)
+        {
+            this->wcpr = false;
+            this->wcgr = false;
+        }
+        else
+        {
+            this->bcgr = false;
+            this->bcpr = false;
+        }
+    }
+    if (c.p.type == R)
+    {
+        if (c.p.isWhite)
+        {
+            if(c.dep.j == 7)
+            {
+                this->wcpr = false;
+            }
+             if(c.dep.j == 0)
+            {
+                this->wcgr = false;
+            }
+        }
+        if (!c.p.isWhite)
+        {
+            if(c.dep.j == 7)
+            {
+                this->bcpr = false;
+            }
+             if(c.dep.j == 0)
+            {
+                this->bcgr = false;
+            }
+        }
 
-    // MODIFIER LE CARACTERE EN PASSANT
+    }
 };
 
 bool is_legal(const coup &c, const Echiquier &e)
 {
     piece p = c.p;
-    piece *ptr_p_dep = e.board[c.dep.i][c.dep.j];
+    piece* ptr_p_dep = e.board[c.dep.i][c.dep.j];
     bool res = false;
-    if (ptr_p_dep != nullptr)
+    if (ptr_p_dep !=nullptr || !is_in(c.dep) || !is_in(c.arr))
     {
         piece p_dep = *ptr_p_dep;
-        if (p.type != P && p.type == p_dep.type) // ce n'est pas un pion
+        if (p.type != P && p.type == p_dep.type && !c.is_special)    //ce n'est pas un pion
         {
             int n = p.nb_dir;
-            for (int l = 0; l < n; l++)
+            for(int l = 0; l < n; l++)
             {
                 bool peut_continuer = true;
                 square s = c.dep;
-                for (s += p.moves[l]; is_in(s) && peut_continuer; s += p.moves[l])
+                for(s += p.moves[l];is_in(s) && peut_continuer; s+=p.moves[l])
                 {
                     res = res || (s == c.arr);
-                    piece *p_s = e.board[s.i][s.j];
-                    peut_continuer = p.iter; // si on ne peut pas aller plusieurs fois dans la même direction, on ne peut jamais continuer
+                    piece* p_s = e.board[s.i][s.j];
+                    peut_continuer = p.iter;     // si on ne peut pas aller plusieurs fois dans la même direction, on ne peut jamais continuer
                     if (p_s != nullptr)
                     {
-                        // on arrive sur une pièce
+                        //on arrive sur une pièce
                         peut_continuer = false;
-                        res = res && (p_s->isWhite != p.isWhite); // si on pensait que le coup était légal mais qu'une pièce allié est sur la case d'arrivée
+                        res =( res || ((s == c.arr) && (p_s->isWhite != p.isWhite)));   //si on pensait que le coup était légal mais qu'une pièce allié est sur la case d'arrivée
                     }
+                }
+            }
+        }
+        else if (p.type != P && p.type == p_dep.type && c.is_special)
+        {
+            if(p.type == K)
+            {
+                //c'est un roque
+                //AJOUTER VERIFICATION QUE LE ROI N'EST PAS EN ECHEC ET QUE LES CASES NE SONT PAS CONTROLEES
+                res = (c.dep.j == 4);
+                int i_dep =0;
+                if (!p.isWhite)
+                {
+                    i_dep = 7;
+                }
+                res = res && (c.dep.i == i_dep);
+                if (c.arr.j == 6 && p.isWhite)
+                {
+                    return res && e.wcpr;
+                }
+                 if (c.arr.j == 3 && p.isWhite)
+                {
+                    return res && e.wcgr;
+                }
+                if (c.arr.j == 6 && !p.isWhite)
+                {
+                    return res && e.bcpr;
+                }
+                 if (c.arr.j == 3 && !p.isWhite)
+                {
+                    return res && e.bcgr;
                 }
             }
         }
@@ -251,14 +360,54 @@ bool is_legal(const coup &c, const Echiquier &e)
             }
             if (!c.is_capture)
             {
-                res = (e.board[c.arr.i][c.arr.j] == nullptr);
                 if ((c.arr.i - c.dep.i == di && c.arr.j == c.dep.j))
                 {
-                    return (c.dep.i >= 1 && c.dep.i <= 6 && e.board[c.arr.i][c.arr.j] == nullptr);
+                    res = (e.board[c.arr.i][c.arr.j] == nullptr);
+                    res = c.dep.i >=1 && c.dep.i <= 6 && res;
+                    if (c.promotion == nullptr)
+                    {return res;}
+                    else
+                    {
+                        int i_prom = 7;
+                        if (!p.isWhite)
+                        {
+                            i_prom = 0;
+                        }
+                        return(res && c.arr.i == i_prom && (*(c.promotion) != P));
+                    }
                 }
-                if (((c.arr.i - c.dep.i == 2 * di) && (c.arr.j == c.dep.j)))
+                if (((c.arr.i - c.dep.i ==  2 * di) && (c.arr.j == c.dep.j)))
                 {
-                    return (c.dep.i >= 1 && c.dep.i <= 6 && e.board[c.arr.i][c.arr.j] == nullptr && e.board[c.dep.i + di][c.arr.j] == nullptr);
+                    res = (e.board[c.arr.i][c.arr.j] == nullptr);
+                    return(c.dep.i == i_dep && e.board[c.arr.i][c.arr.j] == nullptr && e.board[c.dep.i + di][c.arr.j] == nullptr);
+                }
+            }
+            else
+            {
+                //c'est une capture
+                res = (c.arr.i - c.dep.i == di);
+                res = res &&(abs(c.arr.j - c.dep.j) == 1);
+                piece* ptr_p = e.board[c.arr.i][c.arr.j] ;
+                if (ptr_p == nullptr)
+                {
+                    if (e.en_passant !=nullptr)
+                    {
+                        return (*(e.en_passant) == c.arr);       //pas de pièce sur la case de capture, ça ne peut être que en passant
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                }
+                res = res && (ptr_p->isWhite != p.isWhite);
+                if (c.promotion != nullptr)
+                {
+                    int i_prom = 7;
+                    if (!p.isWhite)
+                    {
+                        i_prom = 0;
+                    }
+                    return(res && c.arr.i == i_prom && (*(c.promotion) != P));
                 }
             }
         }
@@ -344,25 +493,26 @@ float eval(const Echiquier &e)
 //===========================================================================
 //                       fonctions codage standard
 //===========================================================================
-piece char2p(const char c) // lettre to pièce (renvoie la pièce noire)
+
+piece char2p(const char c)        //lettre to pièce (renvoie la pièce blanche)
 {
-    if (c == 'K')
+    if (c == 'K' || c == 'k')
     {
         return White_King;
     }
-    if (c == 'Q')
+     if (c == 'Q' || c == 'q')
     {
         return White_Queen;
     }
-    if (c == 'N')
+     if (c == 'N' || c == 'n')
     {
         return White_Knight;
     }
-    if (c == 'B')
+     if (c == 'B' || c == 'b')
     {
         return White_Bishop;
     }
-    if (c == 'R')
+    if (c== 'R' || c == 'r')
     {
         return White_rook;
     }
@@ -370,39 +520,39 @@ piece char2p(const char c) // lettre to pièce (renvoie la pièce noire)
     {
         return White_Pawn;
     }
-};
+}
 
-int col2int(const char c) // c est une lettre entre a et h représentant une colonne. Renvoie le j correspondant
+int col2int (const char c)      //c est une lettre entre a et h représentant une colonne. Renvoie le j correspondant
 {
-    if (c == 'a')
+   if (c == 'a' || c == 'A')
     {
         return 0;
     }
-    if (c == 'b')
+     if (c == 'b' || c == 'B')
     {
         return 1;
     }
-    if (c == 'c')
+     if (c == 'c' || c == 'C')
     {
         return 2;
     }
-    if (c == 'd')
+     if (c == 'd' || c == 'D')
     {
         return 3;
     }
-    if (c == 'e')
+     if (c == 'e' || c == 'E')
     {
         return 4;
     }
-    if (c == 'f')
+    if (c == 'f' || c == 'F')
     {
         return 5;
     }
-    if (c == 'g')
+    if (c == 'g' || c == 'G')
     {
         return 6;
     }
-    if (c == 'h')
+    if (c == 'h' || c == 'H')
     {
         return 7;
     }
@@ -412,21 +562,52 @@ int col2int(const char c) // c est une lettre entre a et h représentant une col
     }
 };
 
-coup alg2coup(char alg[], bool is_white)
+coup alg2coup(char alg[], bool is_white, const Echiquier& e)
 {
-    // cout << "est rentre\n";
+    //cout << "est rentre\n";
     piece p = piece(char2p(alg[0]), is_white);
-    // cout << "p : " << p << "\n";
+    //cout << "p : " << p << "\n";
+    if (alg[0] = 'O' && alg[1] == '-' && alg[2] == 'O')
+    {
+        if(alg[3] == '-' && alg[4] == 'O')
+        {
+            //c'est un grand roque
+            int i_dep =0;
+            if (!is_white)
+            {
+                i_dep = 7;
+            }
+            return coup(piece(char2p('K'), is_white), square(i_dep, 4), square(i_dep, 2),false, true, nullptr);
+        }
+        else
+        {
+            //c'est un petit roque
+            int i_dep =0;
+            if (!is_white)
+            {
+                i_dep = 7;
+            }
+            return coup(piece(char2p('K'), is_white), square(i_dep, 4), square(i_dep, 6),false, true, nullptr);
+        }
+    }
     int j_dep = col2int(alg[1]);
-    // cout << "j_dep : "<< j_dep << "\n";
-    int i_dep = alg[2] - '0' - 1;
+    //cout << "j_dep : "<< j_dep << "\n";
+    int i_dep = alg[2] - '0' -  1;
     bool is_capture = (alg[3] == 'x');
-    // cout << "dep = (" << i_dep << "," << j_dep << ")\n";
+    //cout << "dep = (" << i_dep << "," << j_dep << ")\n";
     int j_arr = col2int(alg[4]);
     int i_arr = alg[5] - '0' - 1;
-    // cout << "dep = (" << i_dep << "," << j_dep << ")\n";
-    // cout << "arr = (" << i_arr << "," << j_arr << ")\n";
-    return coup(p, square(i_dep, j_dep), square(i_arr, j_arr), is_capture);
+    bool is_special = false;
+    //cout << "dep = (" << i_dep << "," << j_dep << ")\n";
+    //cout << "arr = (" << i_arr << "," << j_arr << ")\n";
+    if (is_capture && (e.board[i_arr][j_arr] == nullptr))
+    {
+        is_special = true;      //soit en passant soit illégal
+    }
+    type_piece* promotion = nullptr;
+    if (alg[6] == '=')
+        promotion = new type_piece ((piece(char2p(alg[7]))).type);
+    return coup(p, square(i_dep, j_dep), square(i_arr, j_arr), is_capture, is_special, promotion);
 };
 
 coup lit_alg(const char *c_alg, bool is_white)
