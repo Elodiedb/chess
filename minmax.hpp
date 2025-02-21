@@ -9,14 +9,16 @@
 class Position
 {
 public:
-    Echiquier e;
+    Echiquier* e;
     bool white_turn; // True ssi aux Blancs de jouer
     Position *fille; // première position fille regardée
     Position *soeur; // prochaine position regardée
     coup c;          // coup permettant de passer de la mère à elle
+    square* en_passant;
+    type_piece* capture;
 
     float eval_pos() const;
-    Position(const Echiquier &e, const bool &white_turn, Position *fille, Position *soeur, const coup &c); // fille et soeur seront modifiables!!!
+    Position(Echiquier *e, const bool &white_turn, Position *fille, Position *soeur, const coup &c,square* en_passant, type_piece * capture = nullptr); // fille et soeur seront modifiables!!!
     void prof_suivante(int prof);
     ~Position(); // efface récursivement la position ainsi que les filles et les soeurs
 };
