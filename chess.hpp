@@ -127,6 +127,7 @@ public:
     piece(const pair<int, int> m[], const type_piece t, const bool can_jump, const bool isWhite, const bool iter, const int n, const int table[8][8]);
     piece(const piece p, bool isWhite);
     piece();
+    piece(const type_piece& t, bool isWhite);
 };
 
 extern piece White_King;
@@ -149,7 +150,7 @@ public:
     bool is_capture;
     bool is_special;
     type_piece* promotion;
-    coup(const piece p, const square dep, const square arr, const bool is_capture, bool is_special, type_piece* promotion);
+    coup(const piece p, const square dep, const square arr, const bool is_capture, bool is_special = false, type_piece* promotion = nullptr);
     coup();
 };
 
@@ -169,6 +170,10 @@ public:
     Echiquier();                              // génère la représentation de la position de départ
     Echiquier &operator=(const Echiquier &e); // opérateur par copie
     void make_move(const coup &c);
+    void unmake_move(const coup& c, square* en_passant,type_piece* capture, bool wcpr, bool wcgr, bool bcpr, bool bcgr);
+    bool is_att(const square& s, bool byWhite);
+    bool ischeck(bool white);       //true si on regarde si le roi blanc est en échec
+    int nb_cases_ctrl(square& s);
 };
 
 ostream &operator<<(ostream &os, const piece &p);
