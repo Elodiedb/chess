@@ -82,6 +82,7 @@ piece ::piece()
     *this = piece(White_King, true);
 };
 
+
 piece White_King = piece(king_moves, K, false, true, false, 8, king_middle_game_table);
 piece White_Queen = piece(king_moves, Q, false, true, true, 8, queen_table);
 piece White_Knight = piece(knight_moves, N, true, true, false, 8, knight_table);
@@ -89,6 +90,35 @@ piece White_rook = piece(rook_moves, R, false, true, true, 4, rook_table);
 piece White_Bishop = piece(bishop_moves, B, false, true, true, 4, bishop_table);
 piece White_Pawn = piece(king_moves, P, false, true, false, 8, pawn_table); // A MODIFIER?
 piece pieces[6] = {White_King, White_Queen, White_Knight, White_Bishop, White_rook, White_Pawn};
+
+
+piece :: piece(const type_piece& t, bool isWhite)
+{
+    if (t==K)
+    {
+        (*this) = piece (White_King, isWhite);
+    }
+     if (t==Q)
+    {
+        (*this) = piece (White_Queen, isWhite);
+    }
+    if (t==N)
+    {
+        (*this) = piece (White_Knight, isWhite);
+    }
+     if (t==R)
+    {
+        (*this) = piece (White_rook, isWhite);
+    }
+    if (t==B)
+    {
+        (*this) = piece (White_Bishop, isWhite);
+    }
+     if (t==P)
+    {
+        (*this) = piece (White_Pawn, isWhite);
+    }
+}
 
 //===========================================================================
 //                          class Coup
@@ -103,7 +133,7 @@ coup::coup()
     this->promotion = nullptr;
 };
 
-coup ::coup(const piece p, const square dep, const square arr, const bool is_capture, bool is_special, type_piece* promotion))
+coup ::coup(const piece p, const square dep, const square arr, const bool is_capture, bool is_special, type_piece* promotion)
 {
     this->p = p;
     this->dep = dep;
@@ -159,13 +189,16 @@ ostream &operator<<(ostream &os, const piece &p)
     {
         // La pièce est noire
         os << "W";
+        os << nom_piece[p.type];
     }
     else
     {
         // La pièce est blanche
-        os << "B";
+        //"\033[31mTexte en rouge\033[0m"
+        os <<  "\033[31m" << "B";
+        os << nom_piece[p.type];
+        os << "\033[0m";
     }
-    os << nom_piece[p.type];
     return os;
 };
 
@@ -205,6 +238,11 @@ ostream &operator<<(ostream &os, const Echiquier &e)
 
 void Echiquier ::make_move(const coup &c)
 {
+    if(c.is_capture && !c.is_special)
+    {
+        //capture qui n'est pas en_passant
+        delete (this->board)[c.arr.i][c.arr.j];
+    }
     (this->board)[c.arr.i][c.arr.j] = (this->board)[c.dep.i][c.dep.j];
     (this->board)[c.dep.i][c.dep.j] = nullptr;
      if (c.is_special)
@@ -217,6 +255,8 @@ void Echiquier ::make_move(const coup &c)
             {
                 di = -1;
             }
+            //c'est forcément une capture
+            delete this->board[c.dep.i][c.arr.j];
             this->board[c.dep.i][c.arr.j] = nullptr;
         }
         if (c.p.type == K)
@@ -241,6 +281,7 @@ void Echiquier ::make_move(const coup &c)
     {
         if (abs(c.arr.i - c.dep.i) == 2)
         //delete this->en_passant;
+        //un pion a avancé de deux cases -> maj en_passant
         {this->en_passant = new square((c.arr.i + c.dep.i) / 2, c.dep.j);}
         if (c.promotion != nullptr)
             (*(this->board[c.arr.i][c.arr.j])).type = *c.promotion;
@@ -286,7 +327,81 @@ void Echiquier ::make_move(const coup &c)
     }
 };
 
-bool is_legal(const coup &c, const Echiquier &e)
+void Echiquier :: unmake_move(const coup& c, square* en_passant, type_piece* capture, bool wcpr, bool wcgr, bool bcpr, bool bcgr)
+{
+    //cout << "Je suis appelee\n";
+    if(!c.is_special)
+    {
+        this->board[c.dep.i][c.dep.j] = this->board[c.arr.i][c.arr.j];
+        this->board[c.arr.i][c.arr.j] = nullptr;
+
+        if (c.promotion !=nullptr)
+        {
+            piece p = c.p;
+            delete this->board[c.arr.i][c.arr.j];
+            this->board[c.arr.i][c.arr.j] = nullptr;
+            this->board[c.dep.i][c.dep.j] = new piece(White_Pawn, p.isWhite);
+        }
+        if (capture != nullptr)
+        {
+            //cout << "Piece capturee dans unmake : " << piece(*capture, !c.p.isWhite) << "\n";
+            this->board[c.arr.i][c.arr.j] = new piece(*capture, !c.p.isWhite);}
+        //cout << "je suis ligne 306\n";
+    }
+    else
+        {
+            piece p = c.p;
+            if (p.type == K)
+            {
+                //c'était un roque
+                int i_dep = 0;
+                if (!p.isWhite)
+                {
+                    i_dep = 7;
+                }
+                int j_dep_tour = 7;
+                int j_act_tour = 5;
+                int j_act_roi = 6;
+                if (c.arr.j != 6)
+                {
+                    //c'était un grand roque
+                    j_dep_tour = 0;
+                    j_act_tour = 3;
+                    j_act_roi = 2;
+                }
+                this->board[i_dep][4] = this->board[i_dep][j_act_roi];
+                this->board[i_dep][j_act_roi] = nullptr;
+                this->board[i_dep][j_dep_tour] = this->board[i_dep][j_act_tour];
+                this->board[i_dep][j_act_tour] = nullptr;
+            }
+            else if (p.type == P)
+            {
+                //c'était une prise en passant
+                int di = 1;
+                if (!p.isWhite)
+                {
+                    di = -1;
+                }
+                this->board[c.dep.i][c.dep.j] = this->board[c.arr.i][c.arr.j];
+                this->board[c.arr.i - di][c.arr.j] = new piece(*capture, !p.isWhite);
+                this->board[c.arr.i][c.arr.j] = nullptr;
+                if (c.promotion !=nullptr)
+                {
+                    cout << "UNE PRISE EN PASSANT A DONNE UNE PROMOTION!";
+                    piece p = c.p;
+                    delete this->board[c.dep.i][c.dep.j];
+                    this->board[c.dep.i][c.dep.j] = new piece(White_Pawn, p.isWhite);
+                }
+            }
+        }
+    this->en_passant = en_passant;
+    this->wcpr = wcpr;
+    this->wcgr = wcgr;
+    this->bcpr = bcpr;
+    this->bcgr = bcgr;
+}
+
+bool is_legal(const coup &c, Echiquier &e)
 {
     piece p = c.p;
     piece* ptr_p_dep = e.board[c.dep.i][c.dep.j];
@@ -322,17 +437,33 @@ bool is_legal(const coup &c, const Echiquier &e)
                 //c'est un roque
                 //AJOUTER VERIFICATION QUE LE ROI N'EST PAS EN ECHEC ET QUE LES CASES NE SONT PAS CONTROLEES
                 res = (c.dep.j == 4);
+                res = res && (c.arr.j == 2 || c.arr.j == 6);
+                res = res && (!e.is_att(c.dep, !p.isWhite));        //dep n'est pas attaquée par l'adversaire
+                res = res && (!e.is_att(c.arr, !p.isWhite));         //arr n'est pas attaquée par l'adversaire
                 int i_dep =0;
                 if (!p.isWhite)
                 {
                     i_dep = 7;
                 }
                 res = res && (c.dep.i == i_dep);
+                if (c.arr.j == 6)
+                {
+                    //c'est un petit roque
+                    res = res && (e.board[i_dep][5] == nullptr) && (e.board[i_dep][6] == nullptr);
+                    res = res && (!e.is_att(square(i_dep, 5), !p.isWhite));
+                    //rajouter verif echecs
+                }
+                else if (c.arr.j == 2)
+                {
+                    //c'est un grand roque
+                    res = res && (e.board[i_dep][2] == nullptr) && (e.board[i_dep][3] == nullptr) && (e.board[i_dep][1] == nullptr);
+                     res = res && (!e.is_att(square(i_dep, 2), !p.isWhite) && (!e.is_att(square(i_dep, 3), !p.isWhite)));
+                }
                 if (c.arr.j == 6 && p.isWhite)
                 {
                     return res && e.wcpr;
                 }
-                 if (c.arr.j == 3 && p.isWhite)
+                 if (c.arr.j == 2 && p.isWhite)
                 {
                     return res && e.wcgr;
                 }
@@ -340,7 +471,7 @@ bool is_legal(const coup &c, const Echiquier &e)
                 {
                     return res && e.bcpr;
                 }
-                 if (c.arr.j == 3 && !p.isWhite)
+                 if (c.arr.j == 2 && !p.isWhite)
                 {
                     return res && e.bcgr;
                 }
@@ -459,7 +590,61 @@ Echiquier ::Echiquier()
     this->bcpr = true;
 };
 
-float eval(const Echiquier &e)
+bool Echiquier :: is_att(const square& s, bool byWhite)
+{
+    //cout << "Dans is att\n";
+    bool res = false;
+    for(int i = 0; i < 8 && !res; i++)
+    {
+        for (int j = 0; j < 8 && !res; j++)
+        {
+            //A OPTI EN BOUCLANT SUR LES PIECES?
+            piece * ptr_piece = this->board[i][j];
+            if (ptr_piece != nullptr)
+            {
+                piece p = *ptr_piece;
+                if(p.isWhite == byWhite)
+                {
+                    res = res || is_legal(coup(p, square(i,j), s,true, false, nullptr), *this);
+                    if (p.type==P)
+                    {
+                        //on ne regarde pas la prise en passant, mais la promotion
+                        res = res || is_legal(coup(p, square(i,j), s, true, false, new type_piece(Q)), *this);
+                    }
+                }
+            }
+        }
+    }
+    return res;
+}
+
+bool Echiquier :: ischeck(bool White)
+{
+    //cout << "Dans ischeck \n";
+    bool trouve = false;
+    int i_king = 0;
+    int j_king = 0;
+    for (int i = 0; i< 8 && !trouve; i++)
+    {
+        for  (int j = 0; j <8 && !trouve; j++)
+        {
+            piece * ptr_piece = this->board[i][j];
+            if (ptr_piece != nullptr)
+            {
+                piece p= *ptr_piece;
+                if (((p.type == K) && (p.isWhite == White)))
+                {
+                    i_king = i;
+                    j_king = j;
+                    trouve = true;
+                }
+            }
+        }
+    }
+    return this->is_att(square(i_king, j_king), !White);
+}
+
+float eval(Echiquier &e)
 {
     float res = 0;
     for (int i = 0; i < 8; i++)
@@ -475,13 +660,17 @@ float eval(const Echiquier &e)
                 if (p.isWhite)
                 {
                     res += val_piece[p.type] * 100;
-                    res += p.table[i][j];
+                    //res += p.table[i][j];
+                    square s = square(i,j);
+                    res += e.nb_cases_ctrl(s);
                 }
                 else
                 {
                     // la pièce est noire
                     res -= val_piece[p.type] * 100;
-                    res -= p.table[7 - i][7 - j];
+                    square s = square(i,j);
+                    res -= e.nb_cases_ctrl(s);
+                    //res -= p.table[7 - i][7 - j];
                 }
             }
         }
@@ -572,6 +761,7 @@ coup alg2coup(char alg[], bool is_white, const Echiquier& e)
         if(alg[3] == '-' && alg[4] == 'O')
         {
             //c'est un grand roque
+            //cout << "Je comprends que grand roque\n";
             int i_dep =0;
             if (!is_white)
             {
@@ -630,3 +820,60 @@ coup lit_alg(const char *c_alg, bool is_white)
     cp.dep.i = c_alg[l] - '0';
     return cp;
 };
+
+int Echiquier :: nb_cases_ctrl(square& s)
+{
+    //cout << "Dans nb_cases_ctrl\n";
+    //cout << "(s.i, s.j) = (" << s.i << "," << s.j <<")\n";
+    int res = 0;
+    piece * ptr_piece = this->board[s.i][s.j];
+    if (ptr_piece == nullptr)
+    {
+        //cout << "case ctrl par rien \n";
+        return 0;
+    }
+    else
+    {
+        //cout << "nb_cases_ctrl dans le premier else\n";
+        piece p = *ptr_piece;
+        if (p.type!=P)
+        {
+            int n = p.nb_dir;
+            for(int l = 0; l < n; l++)
+            {
+                //cout << "l nb cases ctrl : " << l << "\n";
+                bool peut_continuer = true;
+                for(s += p.moves[l];is_in(s) && peut_continuer; s+=p.moves[l])
+                {
+                    piece* ptr_p_s = this->board[s.i][s.j];     //eventuelle piece sur la case arr
+                    peut_continuer = p.iter;     // si on ne peut pas aller plusieurs fois dans la même direction, on ne peut jamais continuer
+                    if (this->board[s.i][s.j] != nullptr)
+                    {
+                        //on arrive sur une pièce
+                        peut_continuer = false;
+                        //on compte comme un contrôle même si c'est une pièce alliée
+                        res ++;
+                    }
+                    else
+                    {
+                        //on arrive sur une case libre
+                        res++;
+                    }
+                }
+            }
+        }
+        else
+        {
+            //c'est un pion
+            //cout << "Cases ctrl par un pion\n";
+            if(s.j == 0 || s.j == 7)
+            {return 1;}
+            else
+            {
+                return 2;
+            }
+        }
+    }
+    //cout << "Sorti à la fin de nb_cases_ctrl\n";
+    return res;
+}
