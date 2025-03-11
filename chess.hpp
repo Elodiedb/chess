@@ -4,6 +4,7 @@
 #include <iostream>
 #include <string>
 #include <array>
+#include <vector>
 using namespace std;
 
 enum type_piece
@@ -153,9 +154,8 @@ public:
     coup(const piece p, const square dep, const square arr, const bool is_capture, bool is_special = false, type_piece* promotion = nullptr);
     coup();
 };
-
 //===========================================================================
-//                          class Echequier
+//                          class Echiquier
 //===========================================================================
 class Echiquier
 {
@@ -173,11 +173,12 @@ public:
     void unmake_move(const coup& c, square* en_passant,type_piece* capture, bool wcpr, bool wcgr, bool bcpr, bool bcgr);
     bool is_att(const square& s, bool byWhite);
     bool ischeck(bool white);       //true si on regarde si le roi blanc est en échec
-    int nb_cases_ctrl(square& s);
+    pair<int, int> nb_cases_ctrl(const square& s);
 };
 
 ostream &operator<<(ostream &os, const piece &p);
 ostream &operator<<(ostream &os, const Echiquier &e);
+ostream &operator<<(ostream &os, const coup& c);
 bool is_legal(const coup &c, const Echiquier &e);
 float eval(const Echiquier &e);
 
@@ -189,4 +190,21 @@ int col2int(const char c);  // c est une lettre entre a et h représentant une c
 coup alg2coup(char alg[], bool is_white, const Echiquier& e);
 coup lit_alg(const char *c_alg, bool is_white);
 
+class Historique
+{
+public:
+    vector<coup> c;
+    vector <square*> en_passant;
+    vector <type_piece*> capture;
+    vector <bool> wcpr;
+    vector <bool> wcgr;
+    vector <bool> bcpr;
+    vector <bool> bcgr;
+    Historique();
+    void update(coup c, type_piece * capture, Echiquier& e);     //permettra d'annuler le coup
+    void go_back(int n);
+};
+
+
+void go_back(Echiquier& e, int n, int n_tour, Historique h);
 #endif
