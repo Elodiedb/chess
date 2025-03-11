@@ -57,6 +57,11 @@ void Position :: prof_suivante(int prof)
     //cout << "Appel a prof " << prof << "\n";
     //int capture_trouvees = 0;
     Echiquier* e  = this->e;
+    bool wcpr = e->wcpr;
+    bool wcgr = e->wcgr;
+    bool bcpr = e->bcpr;
+    bool bcgr = e->bcgr;
+    square * en_passant = e->en_passant;
     //cout << *e << "\n";
     bool should_look = true;
     Position * fille_prec = nullptr;
@@ -139,16 +144,25 @@ void Position :: prof_suivante(int prof)
                                         //cout << "nouv_e avant capture\n" << nouv_e << "\n";
                                         coup c = coup(p, square(i,j),s, true);
                                         piece piece_capt = *e->board[s.i][s.j];
-                                        type_piece* ptr_type =  new type_piece(piece_capt.type);;
-                                        //cout << "A trouve une capture de "<< piece_capt << "\n";
-                                        //e->make_move(c);
-                                        //cout << "nouv_e apres capture\n" << nouv_e << "\n";
-                                        //capture_trouvees++;
-                                        //cout << "capture_trouvees :"   << capture_trouvees << "\n";
-                                        Position* fille =new Position(e, !white_turn, nullptr, fille_prec, c, e->en_passant, ptr_type);
-                                        //fille->prof_suivante(prof - 1);
-                                        fille_prec = fille;
-                                        this->fille = fille;
+                                        type_piece* ptr_type =  new type_piece(piece_capt.type);
+                                        e->make_move(c);
+                                        if (e->ischeck(this->white_turn))
+                                        {
+                                            e->unmake_move(c, en_passant, ptr_type, wcpr, wcgr, bcpr, bcgr);
+                                        }
+                                        else
+                                        {
+                                            //cout << "A trouve une capture de "<< piece_capt << "\n";
+                                            //e->make_move(c);
+                                            //cout << "nouv_e apres capture\n" << nouv_e << "\n";
+                                            //capture_trouvees++;
+                                            //cout << "capture_trouvees :"   << capture_trouvees << "\n";
+                                            Position* fille =new Position(e, !white_turn, nullptr, fille_prec, c, e->en_passant, ptr_type);
+                                            //fille->prof_suivante(prof - 1);
+                                            fille_prec = fille;
+                                            this->fille = fille;
+                                            e->unmake_move(c, en_passant, ptr_type, wcpr, wcgr, bcpr, bcgr);;
+                                        }
                                     }
                                 }
                                 else
@@ -163,10 +177,20 @@ void Position :: prof_suivante(int prof)
                                         //cout << this->white_turn << "\n";
                                         //cout << nouv_e;
                                         //cout << "\n";
-                                        Position* fille = new Position(e, !white_turn,nullptr, fille_prec, coup(p, square(i,j),s, false), e->en_passant);
-                                        //fille->prof_suivante(prof-1);
-                                        fille_prec = fille;
-                                        this->fille = fille;
+                                        coup c = coup(p, square(i,j),s, false);
+                                        e->make_move(c);
+                                        if (e->ischeck(this->white_turn))
+                                        {
+                                            e->unmake_move(c,en_passant, nullptr, wcpr, wcgr, bcpr, bcgr);
+                                        }
+                                        else
+                                        {
+                                            Position* fille = new Position(e, !white_turn,nullptr, fille_prec, coup(p, square(i,j),s, false), e->en_passant);
+                                            //fille->prof_suivante(prof-1);
+                                            fille_prec = fille;
+                                            this->fille = fille;
+                                            e->unmake_move(c,en_passant, nullptr, wcpr, wcgr, bcpr, bcgr);
+                                        }
                                     }
                                 }
                             }
@@ -204,14 +228,23 @@ void Position :: prof_suivante(int prof)
                                     //e->make_move(coup(p, dep, square(i+di, j), false));
                                     //cout << "nouv_e apres coup \n" << nouv_e << "\n";
                                     coup c = coup(p, dep, square(i+di, j), false, false, prom);
-                                    Position * fille = new Position(e, !white_turn, nullptr, fille_prec, c, e->en_passant);
-                                    //fille->prof_suivante(prof-1);
-                                    fille_prec = fille;
-                                    this->fille = fille;
-                                    //cout << "on avance le pion " << j << "\n";
-                                    //cout << this->white_turn << "\n";
-                                    //cout << nouv_e;
-                                    //cout << "\n";
+                                    e->make_move(c);
+                                    if (e->ischeck(this->white_turn))
+                                    {
+                                        e->unmake_move(c, en_passant, nullptr, wcpr, wcgr, bcpr, bcgr);
+                                    }
+                                    else
+                                    {
+                                        Position * fille = new Position(e, !white_turn, nullptr, fille_prec, c, e->en_passant);
+                                        //fille->prof_suivante(prof-1);
+                                        fille_prec = fille;
+                                        this->fille = fille;
+                                        //cout << "on avance le pion " << j << "\n";
+                                        //cout << this->white_turn << "\n";
+                                        //cout << nouv_e;
+                                        //cout << "\n";
+                                         e->unmake_move(c, en_passant, nullptr, wcpr, wcgr, bcpr, bcgr);
+                                    }
                                     if (is_in(square(i+2 * di , j)))
                                     {
                                         if((e->board[i+2 * di ][j] == nullptr) && (i == i_dep))
@@ -223,12 +256,21 @@ void Position :: prof_suivante(int prof)
                                             //cout << "nouv_nouv_e apres coup \n" << nouv_nouv_e << "\n";
                                             //cout << "avant l'appel de new position\n";
                                             coup c = coup(p, dep, square(i+2 * di, j), false, false, prom);
-                                            Position * fille2 = new Position(e, !white_turn,nullptr, fille_prec,c,e->en_passant);
-                                            //cout << "avant l'appel de prof_suivante \n";
-                                            //fille2->prof_suivante(prof-1);
-                                            //cout << "la fille a été gérée \n";
-                                            fille_prec = fille2;
-                                            this->fille = fille2;
+                                            e->make_move(c);
+                                            if (e->ischeck(this->white_turn))
+                                            {
+                                                e->unmake_move(c, en_passant, nullptr, wcpr, wcgr, bcpr, bcgr);
+                                            }
+                                            else
+                                            {
+                                                Position * fille2 = new Position(e, !white_turn,nullptr, fille_prec,c,e->en_passant);
+                                                //cout << "avant l'appel de prof_suivante \n";
+                                                //fille2->prof_suivante(prof-1);
+                                                //cout << "la fille a été gérée \n";
+                                                fille_prec = fille2;
+                                                this->fille = fille2;
+                                                e->unmake_move(c, en_passant, nullptr, wcpr, wcgr, bcpr, bcgr);
+                                            }
                                         }
                                     }
                                 //cout << "on a géré les avancées de un et deux\n";
@@ -254,11 +296,20 @@ void Position :: prof_suivante(int prof)
                                         ptr_type = new type_piece(ptr_piece_capt->type);
                                     }
                                     coup c = coup(p, dep, square(i+di, j+1), true, true, prom);
-                                    //piece * ptr_capt = e->board[i][j+1];
-                                    Position * fille = new Position(e, !white_turn,nullptr, fille_prec,c,e->en_passant, ptr_type);
-                                    //fille->prof_suivante(prof-1);
-                                    fille_prec = fille;
-                                    this->fille = fille;
+                                    e->make_move(c);
+                                    if(e->ischeck(this->white_turn))
+                                    {
+                                        e->unmake_move(c, en_passant, ptr_type, wcpr, wcgr, bcpr, bcgr);
+                                    }
+                                    else
+                                    {
+                                        //piece * ptr_capt = e->board[i][j+1];
+                                        Position * fille = new Position(e, !white_turn,nullptr, fille_prec,c,e->en_passant, ptr_type);
+                                        //fille->prof_suivante(prof-1);
+                                        fille_prec = fille;
+                                        this->fille = fille;
+                                        e->unmake_move(c, en_passant, ptr_type, wcpr, wcgr, bcpr, bcgr);
+                                    }
                                 }
                             }
                             //cout << "is_in diagonale droite\n";
@@ -280,11 +331,20 @@ void Position :: prof_suivante(int prof)
                                         ptr_type = new type_piece(ptr_piece_capt->type);
                                     }
                                     coup c = coup(p, dep, square(i+di, j+1), true, false, prom);
-                                    //piece * ptr_capt = e->board[i + di][j+1];
-                                    Position * fille = new Position(e, !white_turn,nullptr, fille_prec,c, e->en_passant,ptr_type);
-                                    //fille->prof_suivante(prof-1);
-                                    fille_prec = fille;
-                                    this->fille = fille;
+                                    e->make_move(c);
+                                    if(e->ischeck(this->white_turn))
+                                    {
+                                        e->unmake_move(c,en_passant, ptr_type, wcpr, wcgr, bcpr, bcgr);
+                                    }
+                                    else
+                                    {
+                                        //piece * ptr_capt = e->board[i + di][j+1];
+                                        Position * fille = new Position(e, !white_turn,nullptr, fille_prec,c, e->en_passant,ptr_type);
+                                        //fille->prof_suivante(prof-1);
+                                        fille_prec = fille;
+                                        this->fille = fille;
+                                        e->unmake_move(c,en_passant, ptr_type, wcpr, wcgr, bcpr, bcgr);
+                                    }
                                 }
                             }
                         }
@@ -308,11 +368,20 @@ void Position :: prof_suivante(int prof)
                                         ptr_type = new type_piece(ptr_piece_capt->type);
                                     }
                                     coup c = coup(p, dep, square(i+di, j-1), true, true, prom);
-                                    //piece* ptr_capt = e->board[i][j-1];
-                                    Position * fille = new Position(e, !white_turn,nullptr, fille_prec,c, e->en_passant, ptr_type);
-                                    //fille->prof_suivante(prof-1);
-                                    fille_prec = fille;
-                                    this->fille = fille;
+                                    e->make_move(c);
+                                    if(e->ischeck(this->white_turn))
+                                    {
+                                        e->unmake_move(c, en_passant, ptr_type, wcpr, wcgr, bcpr, bcgr);
+                                    }
+                                    else
+                                    {
+                                        //piece* ptr_capt = e->board[i][j-1];
+                                        Position * fille = new Position(e, !white_turn,nullptr, fille_prec,c, e->en_passant, ptr_type);
+                                        //fille->prof_suivante(prof-1);
+                                        fille_prec = fille;
+                                        this->fille = fille;
+                                        e->unmake_move(c, en_passant, ptr_type, wcpr, wcgr, bcpr, bcgr);
+                                    }
                                 }
                             }
                             //cout << "is_in diagonale gauche \n";
@@ -336,11 +405,20 @@ void Position :: prof_suivante(int prof)
                                         ptr_type = new type_piece(ptr_piece_capt->type);
                                     }
                                     coup c = coup(p, dep, square(i+di, j-1), true, false, prom);
-                                    //piece * ptr_capt = e->board[i+di][j-1];
-                                    Position * fille = new Position(e, !white_turn,nullptr, fille_prec, c, e->en_passant,ptr_type );
-                                    //fille->prof_suivante(prof-1);
-                                    fille_prec = fille;
-                                    this->fille = fille;
+                                    e->make_move(c);
+                                    if (e->ischeck(this->white_turn))
+                                    {
+                                        e->unmake_move(c, en_passant, ptr_type, wcpr, wcgr, bcpr, bcgr);
+                                    }
+                                    else
+                                    {
+                                        //piece * ptr_capt = e->board[i+di][j-1];
+                                        Position * fille = new Position(e, !white_turn,nullptr, fille_prec, c, e->en_passant,ptr_type );
+                                        //fille->prof_suivante(prof-1);
+                                        fille_prec = fille;
+                                        this->fille = fille;
+                                        e->unmake_move(c, en_passant, ptr_type, wcpr, wcgr, bcpr, bcgr);
+                                    }
                                 }
                             }
                             //cout << "fin traitement diagonale gauche\n";
@@ -381,7 +459,7 @@ meilleur_coup alpha_beta(Position &pos, int prof, float alpha, float beta, coup 
     pos.prof_suivante(prof);
     // cout << "prof_suivante_generee\n";
     float v = pos.eval_pos();
-    if (pos.fille == nullptr || abs(pos.eval_pos()) > 6)        //A MODIFIER?
+    if (pos.fille == nullptr)        //A MODIFIER?
     {
         // cout<< "prof nulle \n" ;
         return (meilleur_coup(pos.eval_pos(), c));
