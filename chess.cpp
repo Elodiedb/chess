@@ -2,7 +2,8 @@
 
 char nom_piece[6] = {'K', 'Q', 'N', 'B', 'R', 'P'};
 int val_piece[6] = {500, 9, 3, 3, 5, 1};
-
+int poids_cases_ctrl[6] = {-5, 1, 3, 3, 2, 2};
+int poids_cases_prot[6] = {0, 0, 2,2,1,4};
 //===========================================================================
 //                          class Square
 //===========================================================================
@@ -143,6 +144,7 @@ coup ::coup(const piece p, const square dep, const square arr, const bool is_cap
     this->promotion = promotion;
 };
 
+
 //===========================================================================
 //                          class Echiquier
 //===========================================================================
@@ -233,6 +235,18 @@ ostream &operator<<(ostream &os, const Echiquier &e)
         }
         // os << "\n";
     }
+    return os;
+};
+
+
+ostream& operator << (ostream &os, const coup &c)
+{
+    os << nom_piece[c.p.type];
+    os << char('a' + c.dep.j);
+    os << c.dep.i + 1;
+    os << (c.is_capture ? 'x': '-');
+    os << char('a' + c.arr.j);
+    os << c.arr.i + 1;
     return os;
 };
 
@@ -660,17 +674,20 @@ float eval(Echiquier &e)
                 if (p.isWhite)
                 {
                     res += val_piece[p.type] * 100;
-                    //res += p.table[i][j];
+                    res += p.table[i][j];
                     square s = square(i,j);
-                    res += e.nb_cases_ctrl(s);
+                    //cout << "Nb cases controlees par s :" << i <<" , " << j << " : " << e.nb_cases_ctrl(s)<<endl;
+                    res += poids_cases_ctrl[p.type] * e.nb_cases_ctrl(s).first;
+                    res += poids_cases_prot[p.type] * e.nb_cases_ctrl(s).second;
                 }
                 else
                 {
                     // la pièce est noire
                     res -= val_piece[p.type] * 100;
                     square s = square(i,j);
-                    res -= e.nb_cases_ctrl(s);
-                    //res -= p.table[7 - i][7 - j];
+                    res -= poids_cases_ctrl[p.type] * e.nb_cases_ctrl(s).first;
+                    res -=  poids_cases_prot[p.type] * e.nb_cases_ctrl(s).second;
+                    res -= p.table[7 - i][j];
                 }
             }
         }
@@ -678,6 +695,16 @@ float eval(Echiquier &e)
     // cout << "a survécu";
     return (res / 100);
 };
+
+void go_back(Echiquier& e, int n, int n_tour, Historique h)
+{
+    for(int i= n_tour - 1; i>=0 && i >= n_tour - n; i -- )
+    {
+        //cout << "n_tour:" << n_tour;
+        //cout << "i : " << i;
+        e.unmake_move(h.c[i], h.en_passant[i], h.capture[i], h.wcpr[i], h.wcgr[i], h.bcpr[i], h.bcgr[i]);
+    }
+}
 
 //===========================================================================
 //                       fonctions codage standard
@@ -821,16 +848,19 @@ coup lit_alg(const char *c_alg, bool is_white)
     return cp;
 };
 
-int Echiquier :: nb_cases_ctrl(square& s)
+pair<int, int> Echiquier :: nb_cases_ctrl(const square& s)
 {
+    //Donne le nombre de cases controlées par la pièce sur le square s et le nombre de cases protégées (ie avec allié dessus)
     //cout << "Dans nb_cases_ctrl\n";
     //cout << "(s.i, s.j) = (" << s.i << "," << s.j <<")\n";
-    int res = 0;
+    square r = square(s.i, s.j);
+    int ctrl = 0;
+    int prot = 0;
     piece * ptr_piece = this->board[s.i][s.j];
     if (ptr_piece == nullptr)
     {
         //cout << "case ctrl par rien \n";
-        return 0;
+        return pair<int, int>(ctrl, prot);
     }
     else
     {
@@ -841,23 +871,30 @@ int Echiquier :: nb_cases_ctrl(square& s)
             int n = p.nb_dir;
             for(int l = 0; l < n; l++)
             {
+                square r = square(s.i, s.j);
                 //cout << "l nb cases ctrl : " << l << "\n";
                 bool peut_continuer = true;
-                for(s += p.moves[l];is_in(s) && peut_continuer; s+=p.moves[l])
+                for(r += p.moves[l];is_in(r) && peut_continuer; r+=p.moves[l])
                 {
-                    piece* ptr_p_s = this->board[s.i][s.j];     //eventuelle piece sur la case arr
+                    piece* ptr_p_s = this->board[r.i][r.j];     //eventuelle piece sur la case arr
                     peut_continuer = p.iter;     // si on ne peut pas aller plusieurs fois dans la même direction, on ne peut jamais continuer
-                    if (this->board[s.i][s.j] != nullptr)
+                    if (this->board[r.i][r.j] != nullptr)
                     {
                         //on arrive sur une pièce
                         peut_continuer = false;
                         //on compte comme un contrôle même si c'est une pièce alliée
-                        res ++;
+                        piece p_adv = *board[r.i][r.j];
+                        if (p_adv.isWhite == p.isWhite)
+                            {prot ++;}
+                        else
+                        {
+                            ctrl++;
+                        }
                     }
                     else
                     {
                         //on arrive sur une case libre
-                        res++;
+                        ctrl++;
                     }
                 }
             }
@@ -866,14 +903,82 @@ int Echiquier :: nb_cases_ctrl(square& s)
         {
             //c'est un pion
             //cout << "Cases ctrl par un pion\n";
+            int di = (p.isWhite ? +1 : -1);
             if(s.j == 0 || s.j == 7)
-            {return 1;}
+            {
+                int dj = (s.j==0 ? 1 : -1);
+                if (this->board[s.i + di][s.j + dj] == nullptr)
+                {
+                    ctrl ++;
+                }
+                else
+                {
+                    //cout << "Avant d'acceder pour capture normale \n";
+                    piece p_adv = *board[s.i + di][s.j+dj];
+                    //cout << "Apres avoir acceder pour capture normale \n";
+                    if (p_adv.isWhite == p.isWhite)
+                    {prot++;}
+                    else
+                    {
+                        ctrl++;
+                    }
+                }
+                return pair<int, int>(ctrl, prot);
+            }
             else
             {
-                return 2;
+                for (int dj = -1; dj <= 1; dj += 2)
+                {
+                    if (this->board[s.i + di][s.j + dj] == nullptr)
+                    {
+                        ctrl ++;
+                    }
+                    else
+                    {
+                        prot++;
+                    }
+                }
+                return pair<int, int>(ctrl, prot);
             }
         }
     }
     //cout << "Sorti à la fin de nb_cases_ctrl\n";
-    return res;
+    return pair<int, int>(ctrl, prot);
+}
+
+//Classe historique
+Historique :: Historique()
+{
+    this->c = vector<coup> ();
+    this->en_passant = vector <square*> ();
+    this->capture = vector <type_piece*> ();
+    this->wcpr = vector <bool> ();
+    this->wcgr = vector <bool> ();
+    this->bcpr = vector <bool> ();
+    this->bcgr = vector <bool> ();
+}
+
+void Historique :: update(coup c, type_piece* capture, Echiquier& e)
+{
+    this->c.push_back(c);
+    this->en_passant.push_back(e.en_passant);
+    this->capture.push_back(capture);
+    this->wcpr.push_back(e.wcpr);
+    this->wcgr.push_back(e.wcgr);
+    this->bcpr.push_back(e.bcpr);
+    this->bcgr.push_back(e.bcgr);
+}
+
+void Historique :: go_back(int n)
+{
+    for(int i = 1; i < n; i++)
+    {
+        this->c.pop_back();
+        this->en_passant.pop_back();
+        this->capture.pop_back();
+        this->wcpr.pop_back();
+        this->wcgr.pop_back();
+        this->bcpr.pop_back();
+        this->bcgr.pop_back();
+    }
 }
