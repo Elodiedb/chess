@@ -3,6 +3,9 @@
 #include <array>
 using namespace std;
 #include "minmax.hpp"
+#include "chess.hpp"
+#include "chess.cpp"
+#include "minmax.cpp"
 
 int main()
 {
