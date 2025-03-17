@@ -15,7 +15,7 @@ enum type_piece
     B,
     R,
     P
-}; // p : pawn, pour le reste cf notation algébrique
+}; // p : pawn, pour le reste cf notation algébrique (anglaise)
 
 extern char nom_piece[6];
 extern int val_piece[6];
@@ -168,7 +168,7 @@ public:
     bool bcgr;          // black can gran roque
 
     Echiquier();                              // génère la représentation de la position de départ
-    Echiquier &operator=(const Echiquier &e); // opérateur par copie
+    Echiquier &operator=(const Echiquier &e); // constructeur par copie
     void make_move(const coup &c);
     void unmake_move(const coup& c, square* en_passant,type_piece* capture, bool wcpr, bool wcgr, bool bcpr, bool bcgr);
     bool is_att(const square& s, bool byWhite);
