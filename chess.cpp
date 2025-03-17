@@ -521,7 +521,7 @@ bool is_legal(const coup &c, Echiquier &e)
                         {
                             i_prom = 0;
                         }
-                        return(res && c.arr.i == i_prom && (*(c.promotion) != P) && (*(c.promotion) != K);      //on peut promouvoir en tout sauf roi et pion
+                        return(res && c.arr.i == i_prom && (*(c.promotion) != P) && (*(c.promotion) != K));      //on peut promouvoir en tout sauf roi et pion
                     }
                 }
                 if (((c.arr.i - c.dep.i ==  2 * di) && (c.arr.j == c.dep.j)))
