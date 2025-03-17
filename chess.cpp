@@ -176,7 +176,6 @@ Echiquier &Echiquier ::operator=(const Echiquier &e) // constructeur par copie
         }
     }
 
-    // 3. Copier le pointeur en_passant (attention, ne pas copier l'objet si c'est alloué dynamiquement)
     this->en_passant = e.en_passant;
     this->wcpr = e.wcpr;
     this->wcgr = e.wcgr;
@@ -189,13 +188,13 @@ ostream &operator<<(ostream &os, const piece &p)
 {
     if (p.isWhite)
     {
-        // La pièce est noire
+        // La pièce est blanche
         os << "W";
         os << nom_piece[p.type];
     }
     else
     {
-        // La pièce est blanche
+        // La pièce est noire
         //"\033[31mTexte en rouge\033[0m"
         os <<  "\033[31m" << "B";
         os << nom_piece[p.type];
@@ -302,6 +301,7 @@ void Echiquier ::make_move(const coup &c)
     }
     if (c.p.type == K)
     {
+        // un roi a bougé : mise à jour des booléens de roque
         if (c.p.isWhite)
         {
             this->wcpr = false;
@@ -315,24 +315,25 @@ void Echiquier ::make_move(const coup &c)
     }
     if (c.p.type == R)
     {
+        // une tour a bougé : mise à jour des booléens de roque
         if (c.p.isWhite)
         {
-            if(c.dep.j == 7)
+            if(c.dep.j == 7 && c.dep.i == 0)
             {
                 this->wcpr = false;
             }
-             if(c.dep.j == 0)
+             if(c.dep.j == 0 && c.dep.i == 0)
             {
                 this->wcgr = false;
             }
         }
         if (!c.p.isWhite)
         {
-            if(c.dep.j == 7)
+            if(c.dep.j == 7 && c.dep.i == 7)
             {
                 this->bcpr = false;
             }
-             if(c.dep.j == 0)
+             if(c.dep.j == 0 && c.dep.i == 7) 
             {
                 this->bcgr = false;
             }
@@ -343,7 +344,6 @@ void Echiquier ::make_move(const coup &c)
 
 void Echiquier :: unmake_move(const coup& c, square* en_passant, type_piece* capture, bool wcpr, bool wcgr, bool bcpr, bool bcgr)
 {
-    //cout << "Je suis appelee\n";
     if(!c.is_special)
     {
         this->board[c.dep.i][c.dep.j] = this->board[c.arr.i][c.arr.j];
@@ -358,9 +358,7 @@ void Echiquier :: unmake_move(const coup& c, square* en_passant, type_piece* cap
         }
         if (capture != nullptr)
         {
-            //cout << "Piece capturee dans unmake : " << piece(*capture, !c.p.isWhite) << "\n";
             this->board[c.arr.i][c.arr.j] = new piece(*capture, !c.p.isWhite);}
-        //cout << "je suis ligne 306\n";
     }
     else
         {
@@ -401,7 +399,6 @@ void Echiquier :: unmake_move(const coup& c, square* en_passant, type_piece* cap
                 this->board[c.arr.i][c.arr.j] = nullptr;
                 if (c.promotion !=nullptr)
                 {
-                    cout << "UNE PRISE EN PASSANT A DONNE UNE PROMOTION!";
                     piece p = c.p;
                     delete this->board[c.dep.i][c.dep.j];
                     this->board[c.dep.i][c.dep.j] = new piece(White_Pawn, p.isWhite);
