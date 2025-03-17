@@ -207,4 +207,5 @@ public:
 
 
 void go_back(Echiquier& e, int n, int n_tour, Historique h);
+int char2ind_cond(char cond[]);
 #endif
