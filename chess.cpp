@@ -333,7 +333,7 @@ void Echiquier ::make_move(const coup &c)
             {
                 this->bcpr = false;
             }
-             if(c.dep.j == 0 && c.dep.i == 7) 
+             if(c.dep.j == 0 && c.dep.i == 7)
             {
                 this->bcgr = false;
             }
@@ -419,7 +419,7 @@ bool is_legal(const coup &c, Echiquier &e)
     piece p = c.p;
     piece* ptr_p_dep = e.board[c.dep.i][c.dep.j];
     bool res = false;
-    if (ptr_p_dep !=nullptr && !is_in(c.dep) && !is_in(c.arr))
+    if (ptr_p_dep !=nullptr && is_in(c.dep) && is_in(c.arr))
     {
         // Il y avait bien une pièce sur la case de départ, qui est bien à l'intérieur de l'échiquier
         piece p_dep = *ptr_p_dep;
@@ -510,8 +510,8 @@ bool is_legal(const coup &c, Echiquier &e)
                 {
                     // C'est un déplacement d'une case vers "l'avant", cohérent avec un coup de pion
                     res = (e.board[c.arr.i][c.arr.j] == nullptr);            //la case d'arrivée est libre
-                    res = c.dep.i >=1 && c.dep.i <= 6 && res;   
-                    if (c.promotion == nullptr)  
+                    res = c.dep.i >=1 && c.dep.i <= 6 && res;
+                    if (c.promotion == nullptr)
                     {return res && (c.arr.i != 7) && (c.arr.i) != 0;}  //il n'est jamais légal de déplacer un pion sur la toute première ou toute dernière rangée (hors promotion)
                     else
                     {
@@ -542,7 +542,7 @@ bool is_legal(const coup &c, Echiquier &e)
                     //C'est une capture qui arrive sur une case libre, ça ne peut être qu'une prise en passant
                     if (e.en_passant !=nullptr)
                     {
-                        return (*(e.en_passant) == c.arr);       
+                        return (*(e.en_passant) == c.arr);
                     }
                     else
                     {
@@ -570,7 +570,7 @@ bool is_legal(const coup &c, Echiquier &e)
 Echiquier ::Echiquier()
 {
     //Crée l'échiquier de départ
-    
+
     // Pions et cases vide
 
     for (int j = 0; j < 8; j++)
@@ -669,7 +669,7 @@ float eval(Echiquier &e)
 {
     float res = 0;
     //on parcourt les cases de l'échiquiers
-    for (int i = 0; i < 8; i++)        
+    for (int i = 0; i < 8; i++)
     {
 
         for (int j = 0; j < 8; j++)
@@ -787,7 +787,7 @@ coup alg2coup(char alg[], bool is_white, const Echiquier& e)
     piece p = piece(char2p(alg[0]), is_white);
     if (alg[0] = 'O' && alg[1] == '-' && alg[2] == 'O')
     {
-        //c'est un roque    
+        //c'est un roque
         if(alg[3] == '-' && alg[4] == 'O')
         {
             //c'est un grand roque
@@ -972,4 +972,26 @@ void Historique :: go_back(int n)
         this->bcpr.pop_back();
         this->bcgr.pop_back();
     }
+}
+
+int char2ind_cond(char cond[])
+{
+    if (cond[0] == 'o' && cond[2] == 'o')
+    {
+        return 0;
+    }
+     if (cond[0] == 'j' && cond[2] == 'j')
+    {
+        return 1;
+    }
+    if (cond[0] == 'j' && cond[2] == 'o')
+    {
+        return 3;
+    }
+     if (cond[0] == 'o' && cond[2] == 'j')
+    {
+        return 2;
+    }
+    return 0;
+
 }
