@@ -358,6 +358,7 @@ void Echiquier :: unmake_move(const coup& c, square* en_passant, type_piece* cap
         }
         if (capture != nullptr)
         {
+            // On remet la piècen qui avait été capturée
             this->board[c.arr.i][c.arr.j] = new piece(*capture, !c.p.isWhite);}
     }
     else
@@ -399,6 +400,7 @@ void Echiquier :: unmake_move(const coup& c, square* en_passant, type_piece* cap
                 this->board[c.arr.i][c.arr.j] = nullptr;
                 if (c.promotion !=nullptr)
                 {
+                    // Logiquement ce cas n'est jamais appelé : une prise en passant ne peut pas aboutir sur une promotion
                     piece p = c.p;
                     delete this->board[c.dep.i][c.dep.j];
                     this->board[c.dep.i][c.dep.j] = new piece(White_Pawn, p.isWhite);
@@ -417,10 +419,11 @@ bool is_legal(const coup &c, Echiquier &e)
     piece p = c.p;
     piece* ptr_p_dep = e.board[c.dep.i][c.dep.j];
     bool res = false;
-    if (ptr_p_dep !=nullptr || !is_in(c.dep) || !is_in(c.arr))
+    if (ptr_p_dep !=nullptr && !is_in(c.dep) && !is_in(c.arr))
     {
+        // Il y avait bien une pièce sur la case de départ, qui est bien à l'intérieur de l'échiquier
         piece p_dep = *ptr_p_dep;
-        if (p.type != P && p.type == p_dep.type && !c.is_special)    //ce n'est pas un pion
+        if (p.type != P && p.type == p_dep.type && !c.is_special)    //ce n'est pas un pion, ce n'est pas un coup spécial et le type de pièce est cohérent
         {
             int n = p.nb_dir;
             for(int l = 0; l < n; l++)
@@ -443,10 +446,10 @@ bool is_legal(const coup &c, Echiquier &e)
         }
         else if (p.type != P && p.type == p_dep.type && c.is_special)
         {
+            //ce n'est pas un pion mais le coup est un coup spécial (et le type est cohérent)
             if(p.type == K)
             {
                 //c'est un roque
-                //AJOUTER VERIFICATION QUE LE ROI N'EST PAS EN ECHEC ET QUE LES CASES NE SONT PAS CONTROLEES
                 res = (c.dep.j == 4);
                 res = res && (c.arr.j == 2 || c.arr.j == 6);
                 res = res && (!e.is_att(c.dep, !p.isWhite));        //dep n'est pas attaquée par l'adversaire
@@ -490,12 +493,13 @@ bool is_legal(const coup &c, Echiquier &e)
         }
         else if (p.type == P && p_dep.type == p.type)
         {
+            //C'est un coup de pion (et le type est cohérent)
             int di = 1;
             if (!p.isWhite)
             {
                 di = -1;
             }
-            int i_dep = 1;
+            int i_dep = 1;            //rangée de départ des pions de la couleur
             if (!p.isWhite)
             {
                 i_dep = 6;
@@ -504,22 +508,25 @@ bool is_legal(const coup &c, Echiquier &e)
             {
                 if ((c.arr.i - c.dep.i == di && c.arr.j == c.dep.j))
                 {
-                    res = (e.board[c.arr.i][c.arr.j] == nullptr);
-                    res = c.dep.i >=1 && c.dep.i <= 6 && res;
-                    if (c.promotion == nullptr)
-                    {return res;}
+                    // C'est un déplacement d'une case vers "l'avant", cohérent avec un coup de pion
+                    res = (e.board[c.arr.i][c.arr.j] == nullptr);            //la case d'arrivée est libre
+                    res = c.dep.i >=1 && c.dep.i <= 6 && res;   
+                    if (c.promotion == nullptr)  
+                    {return res && (c.arr.i != 7) && (c.arr.i) != 0;}  //il n'est jamais légal de déplacer un pion sur la toute première ou toute dernière rangée (hors promotion)
                     else
                     {
-                        int i_prom = 7;
+                        //c'est une promotion
+                        int i_prom = 7;        //rangée de promotion pour la couleur concernée
                         if (!p.isWhite)
                         {
                             i_prom = 0;
                         }
-                        return(res && c.arr.i == i_prom && (*(c.promotion) != P));
+                        return(res && c.arr.i == i_prom && (*(c.promotion) != P) && (*(c.promotion) != K);      //on peut promouvoir en tout sauf roi et pion
                     }
                 }
                 if (((c.arr.i - c.dep.i ==  2 * di) && (c.arr.j == c.dep.j)))
                 {
+                    //C'est un coup de deux cases vers "l'avant"
                     res = (e.board[c.arr.i][c.arr.j] == nullptr);
                     return(c.dep.i == i_dep && e.board[c.arr.i][c.arr.j] == nullptr && e.board[c.dep.i + di][c.arr.j] == nullptr);
                 }
@@ -527,23 +534,26 @@ bool is_legal(const coup &c, Echiquier &e)
             else
             {
                 //c'est une capture
-                res = (c.arr.i - c.dep.i == di);
-                res = res &&(abs(c.arr.j - c.dep.j) == 1);
+                res = (c.arr.i - c.dep.i == di);        //c'est un déplacement de 1 vers "l'avant"
+                res = res &&(abs(c.arr.j - c.dep.j) == 1);        // c'est un déplacement de 1 sur le côté
                 piece* ptr_p = e.board[c.arr.i][c.arr.j] ;
                 if (ptr_p == nullptr)
                 {
+                    //C'est une capture qui arrive sur une case libre, ça ne peut être qu'une prise en passant
                     if (e.en_passant !=nullptr)
                     {
-                        return (*(e.en_passant) == c.arr);       //pas de pièce sur la case de capture, ça ne peut être que en passant
+                        return (*(e.en_passant) == c.arr);       
                     }
                     else
                     {
                         return false;
                     }
                 }
-                res = res && (ptr_p->isWhite != p.isWhite);
+                // La case d'arrivée était occupée
+                res = res && (ptr_p->isWhite != p.isWhite);        //la pièce capturée n'est pas de la couleur du pion déplacé
                 if (c.promotion != nullptr)
                 {
+                    // C'est une capture qui aboutit à une promotion
                     int i_prom = 7;
                     if (!p.isWhite)
                     {
@@ -559,7 +569,8 @@ bool is_legal(const coup &c, Echiquier &e)
 
 Echiquier ::Echiquier()
 {
-
+    //Crée l'échiquier de départ
+    
     // Pions et cases vide
 
     for (int j = 0; j < 8; j++)
@@ -603,13 +614,11 @@ Echiquier ::Echiquier()
 
 bool Echiquier :: is_att(const square& s, bool byWhite)
 {
-    //cout << "Dans is att\n";
     bool res = false;
     for(int i = 0; i < 8 && !res; i++)
     {
         for (int j = 0; j < 8 && !res; j++)
         {
-            //A OPTI EN BOUCLANT SUR LES PIECES?
             piece * ptr_piece = this->board[i][j];
             if (ptr_piece != nullptr)
             {
@@ -620,6 +629,7 @@ bool Echiquier :: is_att(const square& s, bool byWhite)
                     if (p.type==P)
                     {
                         //on ne regarde pas la prise en passant, mais la promotion
+                        //(ie il est légal de capturer sur la case s avec le pion tout en faisant une promotion (en dame))
                         res = res || is_legal(coup(p, square(i,j), s, true, false, new type_piece(Q)), *this);
                     }
                 }
@@ -631,10 +641,10 @@ bool Echiquier :: is_att(const square& s, bool byWhite)
 
 bool Echiquier :: ischeck(bool White)
 {
-    //cout << "Dans ischeck \n";
     bool trouve = false;
     int i_king = 0;
     int j_king = 0;
+    // on cherche le roi potentiellement en échec sur l'échiquier
     for (int i = 0; i< 8 && !trouve; i++)
     {
         for  (int j = 0; j <8 && !trouve; j++)
@@ -658,47 +668,44 @@ bool Echiquier :: ischeck(bool White)
 float eval(Echiquier &e)
 {
     float res = 0;
-    for (int i = 0; i < 8; i++)
+    //on parcourt les cases de l'échiquiers
+    for (int i = 0; i < 8; i++)        
     {
 
         for (int j = 0; j < 8; j++)
         {
-            // cout << "i : " << i << "j : " << j << "\n";
             piece *case_actuelle = e.board[i][j];
             if (case_actuelle != nullptr)
             {
                 piece p = *(case_actuelle);
                 if (p.isWhite)
                 {
-                    res += val_piece[p.type] * 100;
-                    res += p.table[i][j];
+                    res += val_piece[p.type] * 100;        //valeur  brute de la pièce
+                    res += p.table[i][j];            //valeur de la table
                     square s = square(i,j);
-                    //cout << "Nb cases controlees par s :" << i <<" , " << j << " : " << e.nb_cases_ctrl(s)<<endl;
-                    res += poids_cases_ctrl[p.type] * e.nb_cases_ctrl(s).first;
-                    res += poids_cases_prot[p.type] * e.nb_cases_ctrl(s).second;
+                    res += poids_cases_ctrl[p.type] * e.nb_cases_ctrl(s).first;        //valeur due aux cases contrôlées
+                    res += poids_cases_prot[p.type] * e.nb_cases_ctrl(s).second;        //valeur due aux cases protégées
                 }
                 else
                 {
                     // la pièce est noire
-                    res -= val_piece[p.type] * 100;
+                    res -= val_piece[p.type] * 100;         //valeur  brute de la pièce
                     square s = square(i,j);
-                    res -= poids_cases_ctrl[p.type] * e.nb_cases_ctrl(s).first;
-                    res -=  poids_cases_prot[p.type] * e.nb_cases_ctrl(s).second;
-                    res -= p.table[7 - i][j];
+                    res -= poids_cases_ctrl[p.type] * e.nb_cases_ctrl(s).first;      //valeur due aux cases contrôlées
+                    res -=  poids_cases_prot[p.type] * e.nb_cases_ctrl(s).second;     //valeur due aux cases protégées
+                    res -= p.table[7 - i][j];      //valeur de la table (renversée car table prévue pour les blancs)
                 }
             }
         }
     }
-    // cout << "a survécu";
-    return (res / 100);
+    return (res / 100);        //on a multiplié par 100 pour éviter les arrondis dus aux flottants mais on renvoie une évalutaion standard (le pion vaut 1)
 };
 
 void go_back(Echiquier& e, int n, int n_tour, Historique h)
 {
+    //revient n tour(s) en arrière sachant quee nous sommes aactuellement au n_tour ème tour de la partie
     for(int i= n_tour - 1; i>=0 && i >= n_tour - n; i -- )
     {
-        //cout << "n_tour:" << n_tour;
-        //cout << "i : " << i;
         e.unmake_move(h.c[i], h.en_passant[i], h.capture[i], h.wcpr[i], h.wcgr[i], h.bcpr[i], h.bcgr[i]);
     }
 }
@@ -771,17 +778,16 @@ int col2int (const char c)      //c est une lettre entre a et h représentant un
     }
     else
     {
-        return -1;
+        return 0;     // l'entrée ne correspond pas à une colonne standard, on renvoie l'équivalent de 'a' pour éviter un débordement, l'utilisateur pourra annuler
     }
 };
 
 coup alg2coup(char alg[], bool is_white, const Echiquier& e)
 {
-    //cout << "est rentre\n";
     piece p = piece(char2p(alg[0]), is_white);
-    //cout << "p : " << p << "\n";
     if (alg[0] = 'O' && alg[1] == '-' && alg[2] == 'O')
     {
+        //c'est un roque    
         if(alg[3] == '-' && alg[4] == 'O')
         {
             //c'est un grand roque
@@ -805,18 +811,14 @@ coup alg2coup(char alg[], bool is_white, const Echiquier& e)
         }
     }
     int j_dep = col2int(alg[1]);
-    //cout << "j_dep : "<< j_dep << "\n";
     int i_dep = alg[2] - '0' -  1;
     bool is_capture = (alg[3] == 'x');
-    //cout << "dep = (" << i_dep << "," << j_dep << ")\n";
     int j_arr = col2int(alg[4]);
     int i_arr = alg[5] - '0' - 1;
     bool is_special = false;
-    //cout << "dep = (" << i_dep << "," << j_dep << ")\n";
-    //cout << "arr = (" << i_arr << "," << j_arr << ")\n";
     if (is_capture && (e.board[i_arr][j_arr] == nullptr))
     {
-        is_special = true;      //soit en passant soit illégal
+        is_special = true;      //soit en passant soit illégal (capture sans pièce sur la case d'arrivée)
     }
     type_piece* promotion = nullptr;
     if (alg[6] == '=')
@@ -826,6 +828,7 @@ coup alg2coup(char alg[], bool is_white, const Echiquier& e)
 
 coup lit_alg(const char *c_alg, bool is_white)
 {
+    //fonction obsolète
     // on suppose pour l'instant que le coup est légal
     coup cp = coup(); // coup renvoyé
     int l = 0;        // indice dans la chaîne lue
@@ -848,20 +851,16 @@ coup lit_alg(const char *c_alg, bool is_white)
 pair<int, int> Echiquier :: nb_cases_ctrl(const square& s)
 {
     //Donne le nombre de cases controlées par la pièce sur le square s et le nombre de cases protégées (ie avec allié dessus)
-    //cout << "Dans nb_cases_ctrl\n";
-    //cout << "(s.i, s.j) = (" << s.i << "," << s.j <<")\n";
     square r = square(s.i, s.j);
     int ctrl = 0;
     int prot = 0;
     piece * ptr_piece = this->board[s.i][s.j];
     if (ptr_piece == nullptr)
     {
-        //cout << "case ctrl par rien \n";
         return pair<int, int>(ctrl, prot);
     }
     else
     {
-        //cout << "nb_cases_ctrl dans le premier else\n";
         piece p = *ptr_piece;
         if (p.type!=P)
         {
@@ -869,7 +868,6 @@ pair<int, int> Echiquier :: nb_cases_ctrl(const square& s)
             for(int l = 0; l < n; l++)
             {
                 square r = square(s.i, s.j);
-                //cout << "l nb cases ctrl : " << l << "\n";
                 bool peut_continuer = true;
                 for(r += p.moves[l];is_in(r) && peut_continuer; r+=p.moves[l])
                 {
@@ -879,7 +877,7 @@ pair<int, int> Echiquier :: nb_cases_ctrl(const square& s)
                     {
                         //on arrive sur une pièce
                         peut_continuer = false;
-                        //on compte comme un contrôle même si c'est une pièce alliée
+                        //on compte comme un protégée si c'est une pièce alliée
                         piece p_adv = *board[r.i][r.j];
                         if (p_adv.isWhite == p.isWhite)
                             {prot ++;}
@@ -899,7 +897,6 @@ pair<int, int> Echiquier :: nb_cases_ctrl(const square& s)
         else
         {
             //c'est un pion
-            //cout << "Cases ctrl par un pion\n";
             int di = (p.isWhite ? +1 : -1);
             if(s.j == 0 || s.j == 7)
             {
@@ -910,9 +907,7 @@ pair<int, int> Echiquier :: nb_cases_ctrl(const square& s)
                 }
                 else
                 {
-                    //cout << "Avant d'acceder pour capture normale \n";
                     piece p_adv = *board[s.i + di][s.j+dj];
-                    //cout << "Apres avoir acceder pour capture normale \n";
                     if (p_adv.isWhite == p.isWhite)
                     {prot++;}
                     else
@@ -939,7 +934,6 @@ pair<int, int> Echiquier :: nb_cases_ctrl(const square& s)
             }
         }
     }
-    //cout << "Sorti à la fin de nb_cases_ctrl\n";
     return pair<int, int>(ctrl, prot);
 }
 
