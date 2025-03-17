@@ -185,7 +185,7 @@ float eval(const Echiquier &e);
 //===========================================================================
 //                       fonctions codage standard
 //===========================================================================
-piece char2p(const char c); // lettre to pièce (renvoie la pièce noire)
+piece char2p(const char c); // lettre to pièce (renvoie la pièce blanche)
 int col2int(const char c);  // c est une lettre entre a et h représentant une colonne. Renvoie le j correspondant
 coup alg2coup(char alg[], bool is_white, const Echiquier& e);
 coup lit_alg(const char *c_alg, bool is_white);
