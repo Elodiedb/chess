@@ -21,9 +21,36 @@ int main()
     Position test_mat = Position(pos.e, pos.white_turn, nullptr, nullptr,coup(), nullptr, nullptr);
     test_mat.prof_suivante(1);
     int tmax = 400;
+    bool condition [4] = {true, false, pos.white_turn, !pos.white_turn};
+    int indice_condition = 4;
+    while( indice_condition >=4)
+    {
+        char cond[10];
+        for (int j = 0; j < 10; j++)
+        {
+            cond[j] = ' ';
+        }
+        cout << "Choisissez un mode(ovo, jvj, ovj, jvo) : ";
+        cin >> cond;
+        indice_condition = char2ind_cond(cond);
+    }
+    if (indice_condition == 0)
+    {
+        //ordi contre ordi
+        tmax = 100;
+    }
+    if (indice_condition != 1)
+    {
+        prof = -1;
+        while(prof < 0)
+        {
+            cout << "choisissez une profondeur (2 recommande) :";
+            cin >> prof;
+        }
+    }
     while (i < tmax && test_mat.fille != nullptr)     //permet de détecter le mat
     {
-        if (false)     //true pour ordi vs ordi, false pour JvJ, pos.white_turn pour ordi sur les blancs, !pos.white_turn pour ordi sur les noirs
+        if (condition[indice_condition])     //true pour ordi vs ordi, false pour JvJ, pos.white_turn pour ordi sur les blancs, !pos.white_turn pour ordi sur les noirs
         {
             // L'ordi joue ce coup
             cout << *(pos.e);
@@ -116,6 +143,8 @@ int main()
         i++;
         test_mat = Position(pos.e, pos.white_turn, nullptr, nullptr,coup(), nullptr, nullptr);
         test_mat.prof_suivante(1);
+        condition [2] = pos.white_turn;
+        condition [3] =  !pos.white_turn;
     }
     if (i!= tmax)
     {
